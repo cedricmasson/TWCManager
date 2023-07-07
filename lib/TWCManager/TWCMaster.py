@@ -18,7 +18,6 @@ logger = logging.getLogger("\u26FD Master")
 
 
 class TWCMaster:
-
     allowed_flex = 0
     backgroundTasksQueue = queue.Queue()
     backgroundTasksCmds = {}
@@ -64,6 +63,7 @@ class TWCMaster:
     stopTimeout = datetime.max
     spikeAmpsToCancel6ALimit = 16
     subtractChargerLoad = False
+    treatGenerationAsGridDelivery = False
     teslaLoginAskLater = False
     TWCID = None
     updateVersion = False
@@ -87,7 +87,10 @@ class TWCMaster:
         self.config = config
         self.debugOutputToFile = config["config"].get("debugOutputToFile", False)
         self.TWCID = TWCID
-        self.subtractChargerLoad = config["config"]["subtractChargerLoad"]
+        self.subtractChargerLoad = config["config"].get("subtractChargerLoad", False)
+        self.treatGenerationAsGridDelivery = config["config"].get(
+            "treatGenerationAsGridDelivery", False
+        )
         self.advanceHistorySnap()
 
         # Register ourself as a module, allows lookups via the Module architecture
@@ -168,7 +171,6 @@ class TWCMaster:
         return match
 
     def checkScheduledCharging(self):
-
         # Check if we're within the hours we must use scheduledAmpsMax instead
         # of nonScheduledAmpsMax
         blnUseScheduledAmps = 0
@@ -262,7 +264,6 @@ class TWCMaster:
             del self.backgroundTasksCmds[task["cmd"]]
 
     def doneBackgroundTask(self, task):
-
         # Delete task['cmd'] from backgroundTasksCmds such that
         # queue_background_task() can queue another task['cmd'] in the future.
         if "cmd" in task:
@@ -430,7 +431,6 @@ class TWCMaster:
         return int(self.settings.get("scheduledAmpsFlexStart", False))
 
     def getSlaveLifetimekWh(self):
-
         # This function is called from a Scheduled Task
         # If it's been at least 1 minute, then query all known Slave TWCs
         # to determine their lifetime kWh and per-phase voltages
@@ -600,7 +600,7 @@ class TWCMaster:
 
         offset = self.getConsumptionOffset()
         if offset < 0:
-            generationVal += -1 * offset
+            generationVal -= offset
 
         return float(generationVal)
 
@@ -611,7 +611,9 @@ class TWCMaster:
         generationOffset = self.getConsumption()
         if self.subtractChargerLoad:
             generationOffset -= self.getChargerLoad()
-        if generationOffset < 0:
+        # Allow negative offset when EMS reports grid delivery instead of
+        # generation. This means the offset increases the total generation.
+        if generationOffset < 0 and not self.treatGenerationAsGridDelivery:
             generationOffset = 0
         return float(generationOffset)
 
@@ -838,7 +840,6 @@ class TWCMaster:
         return slaveTWC
 
     def num_cars_charging_now(self):
-
         carsCharging = 0
         for slaveTWC in self.getSlaveTWCs():
             if slaveTWC.reportedAmpsActual >= 1.0:
@@ -897,7 +898,6 @@ class TWCMaster:
         return carsCharging
 
     def queue_background_task(self, task, delay=0):
-
         if delay > 0:
             bisect.insort(
                 self.backgroundTasksDelayed,
@@ -1134,7 +1134,6 @@ class TWCMaster:
             self.lastSaveFailed = 1
 
     def send_master_linkready1(self):
-
         logger.log(logging.INFO8, "Send master linkready1")
 
         # When master is powered on or reset, it sends 5 to 7 copies of this
@@ -1191,7 +1190,6 @@ class TWCMaster:
         )
 
     def send_master_linkready2(self):
-
         logger.log(logging.INFO8, "Send master linkready2")
 
         # This linkready2 message is also sent 5 times when master is booted/reset
@@ -1321,7 +1319,6 @@ class TWCMaster:
         self.masterTWCID = twcid
 
     def setMaxAmpsToDivideAmongSlaves(self, amps):
-
         # Use backgroundTasksLock to prevent changing maxAmpsToDivideAmongSlaves
         # if the main thread is in the middle of examining and later using
         # that value.

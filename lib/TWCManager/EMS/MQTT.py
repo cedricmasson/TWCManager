@@ -4,7 +4,6 @@ logger = logging.getLogger(__name__.rsplit(".")[-1])
 
 
 class MQTT:
-
     # MQTT EMS Module
     # Subscribes to Consumption and Generation details from MQTT Publisher
 
@@ -21,8 +20,6 @@ class MQTT:
     __topicGeneration = None
     master = None
     status = False
-    serverIP = None
-    serverPort = 8123
 
     def __init__(self, master):
         self.master = master
@@ -38,6 +35,7 @@ class MQTT:
 
         self.status = self.__configMQTT.get("enabled", False)
         self.brokerIP = self.__configMQTT.get("brokerIP", None)
+        self.brokerPort = self.__configMQTT.get("brokerPort", 1883)
         self.username = self.__configMQTT.get("username", None)
         self.password = self.__configMQTT.get("password", None)
 
@@ -90,7 +88,6 @@ class MQTT:
             logger.log(logging.INFO5, "Res: " + str(res))
 
     def mqttMessage(self, client, userdata, message):
-
         # Takes an MQTT message, and update the associated Generation/Consumption value
         payload = str(message.payload.decode("utf-8"))
 
@@ -106,7 +103,6 @@ class MQTT:
         logger.info("Subscribe operation completed with mid " + str(mid))
 
     def getConsumption(self):
-
         if not self.status:
             logger.debug("Module Disabled. Skipping getConsumption")
             return 0
@@ -115,7 +111,6 @@ class MQTT:
         return self.consumedW
 
     def getGeneration(self):
-
         if not self.status:
             logger.debug("Module Disabled. Skipping getGeneration")
             return 0
