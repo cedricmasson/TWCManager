@@ -69,6 +69,11 @@ class TWCMaster:
     updateVersion = False
     version = "1.3.0"
 
+    # Custom code from Cedric Masson
+    homeAssistantUVOStopUrl = "http://homeassistant.local:8123/api/services/script/stop_uvo_charge"
+    homeAssistantUVOStartUrl = "http://homeassistant.local:8123/api/services/script/start_uvo_charge"
+    homeAssistantHeaders = {"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhZjA3ZDJhNTVjOGM0ZWQ3OTRlMDQ0MDY5MTFiMTBkNiIsImlhdCI6MTY4MDYzNzAwMCwiZXhwIjoxOTk1OTk3MDAwfQ.GsUgLLmfbg4YD56LXR3lol7XaLsedUkscU8u6yBFH_I", "Content-Type": "application/json"}
+
     # TWCs send a seemingly-random byte after their 2-byte TWC id in a number of
     # messages. I call this byte their "Sign" for lack of a better term. The byte
     # never changes unless the TWC is reset or power cycled. We use hard-coded
@@ -1254,6 +1259,22 @@ class TWCMaster:
                     + bytearray(b"\x00\x00\x00\x00\x00\x00\x00\x00\x00")
                 )
 
+    def callUVOStopCommand(self):
+        # Custom code from @massonced74@gmail.com Masson Cedric
+        # Made to call the stop command to UVO API (for a KIA eniro) via a homeassistant API call.
+        data = {"entity_id": "script.stop_uvo_charge"}
+        logger.info("Calling UVO Stop Command...")
+        response = requests.post(self.homeAssistantUVOStopUrl, headers=self.homeAssistantHeaders, data=json.dumps(data))
+        logger.info("Calling UVO Stop Command response " + str(response))
+    
+    def callUVOStartCommand(self):
+        # Custom code from @massonced74@gmail.com Masson Cedric
+        # Made to call the stop command to UVO API (for a KIA eniro) via a homeassistant API call.
+        data = {"entity_id": "script.start_uvo_charge"}
+        logger.info("Calling UVO Start Command...")
+        response = requests.post(self.homeAssistantUVOStartUrl, headers=self.homeAssistantHeaders, data=json.dumps(data))
+        logger.info("Calling UVO Start Command response " + str(response))
+
     def setAllowedFlex(self, amps):
         self.allowedFlex = amps if amps >= 0 else 0
 
@@ -1402,7 +1423,7 @@ class TWCMaster:
             self.getModuleByName("Policy").clearOverride()
         elif stopMode == 2:
             self.settings["respondToSlaves"] = 1
-        elif stopMode == 3:
+        elif stopMode in [3, 4]:
             self.queue_background_task({"cmd": "charge", "charge": True})
 
     def stopCarsCharging(self):
@@ -1427,6 +1448,9 @@ class TWCMaster:
             self.settings["respondToSlavesExpiry"] = time.time() + 60
         if stopMode == 3:
             self.sendStopCommand()
+        if stopMode == 4:
+            self.sendStopCommand()
+            self.callUVOStopCommand()
 
     def time_now(self):
         return datetime.now().strftime(

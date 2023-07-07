@@ -614,6 +614,7 @@ class TWCSlave:
             and self.reportedAmpsActual > 3
         ):
             self.master.getModuleByName("Policy").fireWebhook("start")
+            #self.master.callUVOStartCommand()
             self.master.queue_background_task({"cmd": "checkArrival"})
 
         # If power drops off, check whether a car leaves in the next little while
@@ -622,6 +623,7 @@ class TWCSlave:
             and self.reportedAmpsActual < 2
         ):
             self.master.getModuleByName("Policy").fireWebhook("stop")
+            #self.master.callUVOStopCommand()
             self.master.queue_background_task({"cmd": "checkDeparture"}, 5 * 60)
             self.master.queue_background_task({"cmd": "checkDeparture"}, 20 * 60)
             self.master.queue_background_task({"cmd": "checkDeparture"}, 45 * 60)
