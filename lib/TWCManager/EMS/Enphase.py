@@ -96,9 +96,12 @@ class Enphase:
     def getPortalValue(self, url):
         # Fetch the specified URL from the Enphase Portal and return the data
         self.fetchFailed = False
-
+        headers = {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRkMGQtYmNiNC0yNDRmOThlZTE1NmIiLCJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJhdWQiOiIxMjIyMDQwMjY5ODMiLCJpc3MiOiJFbnRyZXoiLCJlbnBoYXNlVXNlciI6Imluc3RhbGxlciIsImV4cCI6MTY4ODk3NDA3NCwiaWF0IjoxNjg4OTMwODc0LCJqdGkiOiIwYmNhZjIyZi05ZjczLTQ3NmEtODY4My0zYzQwNjhiYzU0NDUiLCJ1c2VybmFtZSI6Im1hc3NvbmNlZDc0QGdtYWlsLmNvbSJ9.LH_19kldXMC61uPsAFzI9zeDiHCSBXxMkQ4mKXEV5Ne2tByxX3KSDajG6PdZxV4JI60z6zqZtcmRSMwhK6o7kA'
+        }
         try:
-            r = self.requests.get(url, timeout=self.timeout)
+            r = self.requests.get(url, headers=headers, verify=False, timeout=self.timeout)
         except self.requests.exceptions.ConnectionError as e:
             logger.log(
                 logging.INFO4,
